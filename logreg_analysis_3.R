@@ -202,6 +202,21 @@ kfold_none <- kfold(mres_none)
 # p_kfold          NA   NA
 # kfoldic       651.6 37.6
 
+# compare models
+compare_ic(kfold_full, kfold_abst, kfold_mod, kfold_none)
+
+#                       KFOLDIC    SE // results with cauchy(0,1) prior
+# mres_full              650.25 37.92
+# mres_abst              645.22 37.82
+# mres_mod               643.74 38.80
+# mres_none              653.42 37.97
+# mres_full - mres_abst    5.04  8.82
+# mres_full - mres_mod     6.51 12.21
+# mres_full - mres_none   -3.17 12.30
+# mres_abst - mres_mod     1.48 10.51
+# mres_abst - mres_none   -8.21  8.90
+# mres_mod - mres_none    -9.69  8.94
+
 # ###############################################
 # ### results and interpretation ################
 # ###############################################
