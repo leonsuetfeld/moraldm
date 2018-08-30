@@ -92,12 +92,12 @@ model_full = choice_left ~
              1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*modality*abstraction +
             (1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*modality*abstraction | sn_idx)
 
-# abstract only model (no modality levels)
+# abstraction only model (no modality levels)
 model_abst = choice_left ~
              1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*abstraction +
             (1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*abstraction | sn_idx)
 
-# modality model (no abstraction levels)
+# modality only model (no abstraction levels)
 model_mod = choice_left ~
             1 + visonset_left + (sex_diff + young_diff + elderly_diff)*modality +
           (1 + visonset_left + (sex_diff + young_diff + elderly_diff)*modality | sn_idx)
@@ -150,9 +150,9 @@ mres_none = brm(model_none,
 
 # print results of fit
 summary(mres_full) # 17-21 divergent transitions with exponential(1)
-summary(mres_abst) # no divergent 
-summary(mres_mod)
-summary(mres_none)
+summary(mres_abst) # no divergent transisitons with exponential(1)
+summary(mres_mod)  # no divergent transisitons with exponential(1)
+summary(mres_none) # no divergent transisitons with exponential(1)
 
 # ###############################################
 # ### model comparison ##########################
@@ -178,26 +178,26 @@ summary(mres_none)
 #  be more appropriate to use 'kfold' with argument 'K = 10' to perform 10-fold cross-validation rather than LOO. 
 
 kfold_full <- kfold(mres_full)
-#            Estimate   SE
+#            Estimate   SE // with exponential(1) prior
 # elpd_kfold   -331.4 19.1
 # p_kfold          NA   NA
 # kfoldic       662.8 38.2
 # > kfold_abst
 
 kfold_abst <- kfold(mres_abst)
-#            Estimate   SE
+#            Estimate   SE // with exponential(1) prior
 # elpd_kfold   -325.8 18.7
 # p_kfold          NA   NA
 # kfoldic       651.6 37.3
 
 kfold_mod <- kfold(mres_mod)
-#            Estimate   SE
+#            Estimate   SE // with exponential(1) prior
 # elpd_kfold   -320.1 18.4
 # p_kfold          NA   NA
 # kfoldic       640.2 36.9
 
 kfold_none <- kfold(mres_none)
-#            Estimate   SE
+#            Estimate   SE // with exponential(1) prior
 # elpd_kfold   -325.8 18.8
 # p_kfold          NA   NA
 # kfoldic       651.6 37.6
