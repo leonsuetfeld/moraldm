@@ -75,7 +75,7 @@ d1.hum.effect$abstraction <- d1.hum.effect$abstraction - 0.5
 d1.hum.effect %>% purrr::map(function(x)unique(x))
 
 # ###############################################
-# ### fit models ################################
+# ### fit glm models (flat priors/ ML) ##########
 # ###############################################
 
 # glm fit (no priors for quick check) 
@@ -83,29 +83,124 @@ mres_lme = lme4::glmer(choice_left ~
                        1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*modality*abstraction + (1 | sn_idx),
                        family=binomial, data=d1.hum.effect)
 
-# model for baysian model
-modelformula = choice_left ~
-               1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*modality*abstraction +
-              (1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*modality*abstraction | sn_idx)
+# ###############################################
+# ### fit bayesian models #######################
+# ###############################################
+
+# full model
+model_full = choice_left ~
+             1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*modality*abstraction +
+            (1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*modality*abstraction | sn_idx)
+
+# abstract only model (no modality levels)
+model_abst = choice_left ~
+             1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*abstraction +
+            (1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*abstraction | sn_idx)
+
+# modality model (no abstraction levels)
+model_mod = choice_left ~
+            1 + visonset_left + (sex_diff + young_diff + elderly_diff)*modality +
+          (1 + visonset_left + (sex_diff + young_diff + elderly_diff)*modality | sn_idx)
+
+# none model (no modality or abstraction levels)
+model_none = choice_left ~
+             1 + visonset_left + sex_diff + young_diff + elderly_diff +
+            (1 + visonset_left + sex_diff + young_diff + elderly_diff | sn_idx)
 
 # priors for bayesian model
-modelprior = get_prior(modelformula, family=binomial, data=d1.hum.effect)
+modelprior = get_prior(model_full, family=binomial, data=d1.hum.effect)
 priors <- c(set_prior("lkj(2)", class = "cor"),
             set_prior("normal(0,3)", class = "b"),
-            set_prior("exponential(1)", class = "sd", group = "sn_idx")) # alternative: cauchy(0,1)
+            set_prior("cauchy(0,1)", class = "sd", group = "sn_idx")) # alternatives: exponential(1) / cauchy(0,1)
 # info on priors:
 # https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations#prior-for-the-regression-coefficients-in-logistic-regression-non-sparse-case
 # http://jakewestfall.org/misc/SorensenEtAl.pdf
 
-# fit model
-mres = brm(modelformula,
-           family=bernoulli,
-           data=d1.hum.effect,
-           control = list(adapt_delta=0.9),
-           prior = priors)
+# fit full model
+mres_full = brm(model_full,
+                family=bernoulli,
+                data=d1.hum.effect,
+                control = list(adapt_delta=0.9),
+                prior = priors)
+
+# fit abst model
+mres_abst = brm(model_abst,
+                family=bernoulli,
+                data=d1.hum.effect,
+                control = list(adapt_delta=0.9),
+                prior = priors)
+
+# fit modu model
+mres_mod = brm(model_mod,
+               family=bernoulli,
+               data=d1.hum.effect,
+               control = list(adapt_delta=0.9),
+               prior = priors)
+
+# fit none model
+mres_none = brm(model_none,
+                family=bernoulli,
+                data=d1.hum.effect,
+                control = list(adapt_delta=0.9),
+                prior = priors)
+
+# ###############################################
+# ### print results #############################
+# ###############################################
 
 # print results of fit
-summary(mres)
+summary(mres_full) # 17-21 divergent transitions with exponential(1)
+summary(mres_abst) # no divergent 
+summary(mres_mod)
+summary(mres_none)
+
+# ###############################################
+# ### model comparison ##########################
+# ###############################################
+
+# waic_full <- WAIC(mres_full)
+# waic_abst <- WAIC(mres_abst)
+# waic_mod <- WAIC(mres_mod)
+# waic_none <- WAIC(mres_none)
+
+# Warning message:
+#  74 (6.5%) p_waic estimates greater than 0.4. We recommend trying loo instead. 
+
+# loo_full <- loo(mres_full)
+# loo_abst <- loo(mres_abst)
+# loo_mod <- loo(mres_mod)
+# loo_none <- loo(mres_none)
+
+# compare_ic(loo_full, loo_abst, loo_mod, loo_none)
+
+# Warning message:
+#  Found 79 observations with a pareto_k > 0.7 in model 'mres'. With this many problematic observations, it may
+#  be more appropriate to use 'kfold' with argument 'K = 10' to perform 10-fold cross-validation rather than LOO. 
+
+kfold_full <- kfold(mres_full)
+#            Estimate   SE
+# elpd_kfold   -331.4 19.1
+# p_kfold          NA   NA
+# kfoldic       662.8 38.2
+# > kfold_abst
+
+kfold_abst <- kfold(mres_abst)
+#            Estimate   SE
+# elpd_kfold   -325.8 18.7
+# p_kfold          NA   NA
+# kfoldic       651.6 37.3
+
+kfold_mod <- kfold(mres_mod)
+#            Estimate   SE
+# elpd_kfold   -320.1 18.4
+# p_kfold          NA   NA
+# kfoldic       640.2 36.9
+
+kfold_none <- kfold(mres_none)
+#            Estimate   SE
+# elpd_kfold   -325.8 18.8
+# p_kfold          NA   NA
+# kfoldic       651.6 37.6
 
 # ###############################################
 # ### results and interpretation ################
@@ -200,7 +295,8 @@ summary(mres)
 # ### posterior predictive check ################
 # ###############################################
 
-pp_check(mres, "data", nsamples = NULL, group = "sn_idx")
+ppc = pp_check(mres, "data", nsamples = NULL, group = "sn_idx")
+ppc_data(d1.hum, ppc)
 
 # steps to manually sample from the distribution
 # 1) sample all population-level parameters from the posterior distribution
