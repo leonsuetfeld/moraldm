@@ -106,18 +106,34 @@ mres_full = brm(model_full,
                 control = list(adapt_delta=0.9),
                 prior = priors)
 
-# age / sex model
+# sex model
+model_sex = choice_left ~
+  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction + 
+  (visonset_left + sex_diff + young_diff + elderly_diff)*sex + 
+  ((1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction + 
+  (visonset_left + sex_diff + young_diff + elderly_diff)*sex | sn_idx)
+modelprior_sex = get_prior(model_sex, family=binomial, data=d1.hum.effect)
+priors_sex <- c(set_prior("lkj(2)", class = "cor"),
+                set_prior("normal(0,3)", class = "b"),
+                set_prior("cauchy(0,1)", class = "sd", group = "sn_idx")) # alternatives: exponential(1) / cauchy(0,1)
+mres_sex = brm(model_sex,
+               family=bernoulli,
+               data=d1.hum.effect,
+               control = list(adapt_delta=0.9),
+               prior = priors_sex)
+
+# agesex model
 model_agesex = choice_left ~
   (1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction + 
-  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*age + 
-  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*sex + 
- ((1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction + 
-  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*age + 
-  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*sex | sn_idx)
+  (visonset_left + sex_diff + young_diff + elderly_diff)*sex + 
+  (visonset_left + sex_diff + young_diff + elderly_diff)*age + 
+  ((1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction + 
+  (visonset_left + sex_diff + young_diff + elderly_diff)*sex + 
+  (visonset_left + sex_diff + young_diff + elderly_diff)*age | sn_idx)
 modelprior_agesex = get_prior(model_agesex, family=binomial, data=d1.hum.effect)
 priors_agesex <- c(set_prior("lkj(2)", class = "cor"),
-                   set_prior("normal(0,3)", class = "b"),
-                   set_prior("cauchy(0,1)", class = "sd", group = "sn_idx")) # alternatives: exponential(1) / cauchy(0,1)
+                set_prior("normal(0,3)", class = "b"),
+                set_prior("cauchy(0,1)", class = "sd", group = "sn_idx")) # alternatives: exponential(1) / cauchy(0,1)
 mres_agesex = brm(model_agesex,
                   family=bernoulli,
                   data=d1.hum.effect,
@@ -156,21 +172,6 @@ summary(mres_full, maxsum=2)
 # predictions for abstraction==1 (image): main + 0.5*abstraction
 # predictions for abstraction==0 (text): main - 0.5*abstraction
 
-# Group-Level Effects: 
-#   ~sn_idx (Number of levels: 85) 
-#                   Estimate Est.Error l-95% CI u-95% CI
-# sd(Intercept)         0.52      0.30     0.03     1.10 = low between-subject variance w.r.t. lane preference
-# sd(visonset_left)     2.28      0.76     0.73     3.83 = higher between-subject variance w.r.t. omission bias
-# sd(sex_diff)          0.71      0.53     0.02     1.95 = low between-subject variance w.r.t. value of gender / sex
-# sd(young_diff)        3.57      2.44     0.10     7.91 = higher between-subject variance w.r.t. value of age
-# sd(elderly_diff)      4.09      2.13     0.15     7.35 = higher between-subject variance w.r.t. value of age
-# sd(modality)          0.82      0.56     0.04     2.01
-# sd(abstraction)       0.43      0.33     0.02     1.23
-
-# summary(mres_abst)
-# summary(mres_mod)
-# summary(mres_none)
-
 # plot posteriors
 stanplot(mres_full, pars=c("b_"), type="areas", exact_match=FALSE)
 
@@ -179,23 +180,9 @@ stanplot(mres_full, pars=c("b_"), type="areas", exact_match=FALSE)
 # ###############################################
 
 kfold_full <- kfold(mres_full)
-kfold_abst <- kfold(mres_abst)
-kfold_mod <- kfold(mres_mod)
-kfold_none <- kfold(mres_none)
 
 # compare models
-compare_ic(kfold_full, kfold_abst, kfold_mod, kfold_none)
-
-# mres_full              649.52 37.71
-# mres_abst              644.69 37.76 = shared best models according to WAIC
-# mres_mod               644.66 38.94 = shared best models according to WAIC
-# mres_none              653.15 37.93
-# mres_full - mres_abst    4.84  8.72
-# mres_full - mres_mod     4.87 12.25
-# mres_full - mres_none   -3.62 12.27
-# mres_abst - mres_mod     0.03 10.49
-# mres_abst - mres_none   -8.46  8.88
-# mres_mod - mres_none    -8.49  8.92
+# compare_ic(kfold_full, kfold_abst, kfold_mod, kfold_none)
 
 # The ic is -2 * summed expected log pointwise predictive density,
 # putting the elpd on the deviance scale so being similar to other
@@ -206,6 +193,8 @@ compare_ic(kfold_full, kfold_abst, kfold_mod, kfold_none)
 # ###############################################
 
 # I would treat these as "just for us" to make sure our model doesn't predict nonsense.
+
+# THESE ARE STILL THE OLD ONES COPIED OVER FROM THE OTHER CODE, NO NEED TO CHECK HERE.
 
 # all four conditions combined, single-level model vs. multi-level model
 # pp_single = posterior_predict(mres_single, nsamples = 1000)
@@ -236,9 +225,3 @@ dnew.pp = reshape2::melt(dnew,measure.vars=c("pp_samesub","pp_newsub","pp_single
 ggplot(dnew.pp,aes(x=young_diff,y=value,group=variable,color=factor(variable)))+stat_summary(position=position_dodge(width=0.2))+geom_hline(yintercept=0.5)+facet_grid(modality~abstraction)+ylim(c(0,1))
 ggplot(dnew.pp,aes(x=elderly_diff,y=value,group=variable,color=factor(variable)))+stat_summary(position=position_dodge(width=0.2))+geom_hline(yintercept=0.5)+facet_grid(modality~abstraction)+ylim(c(0,1))
 ggplot(dnew.pp,aes(x=sex_diff,y=value,group=variable,color=factor(variable)))+stat_summary(position=position_dodge(width=0.2))+geom_hline(yintercept=0.5)+facet_grid(modality~abstraction)+ylim(c(0,1))
-
-# #############
-# ### misc ####
-# #############
-
-# also report EDA results
