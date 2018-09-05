@@ -87,6 +87,10 @@ mres_lme = lme4::glmer(choice_left ~
 # ### fit bayesian models #######################
 # ###############################################
 
+# single level model
+model_single = choice_left ~
+               1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*modality*abstraction
+
 # full model
 model_full = choice_left ~
              1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*modality*abstraction +
@@ -108,6 +112,8 @@ model_none = choice_left ~
             (1 + visonset_left + sex_diff + young_diff + elderly_diff | sn_idx)
 
 # priors for bayesian model
+modelprior_single = get_prior(model_single, family=binomial, data=d1.hum.effect)
+priors_single <- c(set_prior("normal(0,3)", class = "b"))
 modelprior = get_prior(model_full, family=binomial, data=d1.hum.effect)
 priors <- c(set_prior("lkj(2)", class = "cor"),
             set_prior("normal(0,3)", class = "b"),
@@ -115,6 +121,13 @@ priors <- c(set_prior("lkj(2)", class = "cor"),
 # info on priors:
 # https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations#prior-for-the-regression-coefficients-in-logistic-regression-non-sparse-case
 # http://jakewestfall.org/misc/SorensenEtAl.pdf
+
+# fit single level model
+mres_single = brm(model_single,
+                  family=bernoulli,
+                  data=d1.hum.effect,
+                  control = list(adapt_delta=0.9),
+                  prior = priors_single)
 
 # fit full model
 mres_full = brm(model_full,
@@ -310,8 +323,33 @@ compare_ic(kfold_full, kfold_abst, kfold_mod, kfold_none)
 # ### posterior predictive check ################
 # ###############################################
 
-ppc = pp_check(mres, "data", nsamples = NULL, group = "sn_idx")
-ppc_data(d1.hum, ppc)
+# all four conditions combined, single-level model vs. multi-level model
+pp_single = posterior_predict(mres_single, nsamples = 1000)
+pp = posterior_predict(mres_full, nsamples = 1000)
+d1.hum.effect$pp_single = apply(pp,2,mean)
+d1.hum.effect$pp = apply(pp,2,mean)
+d1.pp = reshape2::melt(d1.hum.effect,measure.vars=c("pp","pp_single","choice_left"))
+ggplot(d1.pp,aes(x=young_diff,y=value,group=variable,color=factor(variable)))+stat_summary(position=position_dodge(width=0.2))+geom_hline(yintercept=0.5)+facet_wrap(~abstraction)
+
+# by condition, sampling "new random subjects"
+dnew = d1.hum.effect %>% group_by(modality,abstraction,sex_diff,visonset_left,elderly_diff,young_diff)%>%summarise(choice_left=mean(choice_left))
+pp_newsub = posterior_predict(mres_full,newdata = data.frame(dnew),allow_new_levels = TRUE,sample_new_levels="gaussian")
+pp_single_newsub = posterior_predict(mres_single,newdata = data.frame(dnew))
+dnew$pp_newsub = apply(pp_newsub,2,mean)
+pp_single_newsub = posterior_predict(mres_single,newdata = data.frame(dnew))
+dnew$pp_single_newsub = apply(pp_single_newsub,2,mean)
+pp_uncert = posterior_predict(mres_full,newdata = data.frame(dnew),allow_new_levels = TRUE,sample_new_levels="uncertainty")
+dnew$pp_uncert = apply(pp_uncert,2,mean)
+
+# by condition, using the observed subjects
+tmp = d1.hum.effect %>% group_by(modality,abstraction,sex_diff,visonset_left,elderly_diff,young_diff,sn_idx)%>%summarise(choice_left=mean(choice_left))
+pp_samesub = posterior_predict(mres_full,newdata = data.frame(tmp),allow_new_levels = FALSE,sample_new_levels="gaussian")
+tmp$pp_samesub = apply(pp_samesub,2,mean)
+dnew$pp_samesub = tmp %>% group_by(modality,abstraction,sex_diff,visonset_left,elderly_diff,young_diff)%>%summarise(pp_samesub=mean(pp_samesub))%>%.$pp_samesub
+
+# plot
+dnew.pp = reshape2::melt(dnew,measure.vars=c("pp_samesub","pp_newsub","pp_single_newsub","choice_left"))
+ggplot(dnew.pp,aes(x=young_diff,y=value,group=variable,color=factor(variable)))+stat_summary(position=position_dodge(width=0.2))+geom_hline(yintercept=0.5)+facet_grid(modality~abstraction)+ylim(c(0,1))
 
 # steps to manually sample from the distribution
 # 1) sample all population-level parameters from the posterior distribution
