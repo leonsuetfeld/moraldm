@@ -189,28 +189,6 @@ stanplot(mres_full, pars=c("b_"), type="areas", exact_match=FALSE)
 # ### plots #####################################
 # ###############################################
 
-terms = c("Intercept",
-          "visonset_left",
-          "sex_diff",
-          "young_diff",
-          "elderly_diff",
-          "abstraction",
-          "visonset_left.abstraction",
-          "sex_diff.abstraction",
-          "young_diff.abstraction",
-          "elderly_diff.abstraction",
-          "speed",
-          "visonset_left.speed",
-          "sex_diff.speed",
-          "young_diff.speed",
-          "elderly_diff.speed",
-          "speed.abstraction",
-          "visonset_left.speed.abstraction",
-          "sex_diff.speed.abstraction",
-          "young_diff.speed.abstraction",
-          "elderly_diff.speed.abstraction"),
-order.terms = c(6,13,7,17,2,1,14,8,18,3,11,15,9,19,4,12,16,10,20,5),
-
 s2_p1 <- plot_model(mres_agesexsdsvg,
                     order.terms = c(1,2,3,4,5,
                                     7,12,13,14,15,
@@ -289,17 +267,17 @@ s2_p2 <- plot_model(mres_agesexsdsvg,
 fe_sex_diff <- fixef(mres_agesexsdsvg)[3,1]
 sex_coefs <- ranef(mres_agesexsdsvg)$sn_idx[,1,]%>%data.frame()%>%.$sex_diff+fe_sex_diff
 # sex_coefs <- exp(sex_coefs)
-s2_p3 <- qplot(sex_coefs, xlim = c(0,4), xlab = "value of life (female), relative to male")
+s2_p3 <- qplot(sex_coefs, xlim = c(0,6), xlab = "value of life (female), relative to male")
 
 fe_young_diff <- fixef(mres_agesexsdsvg)[4,1]
 young_coefs <- ranef(mres_agesexsdsvg)$sn_idx[,1,]%>%data.frame()%>%.$young_diff+fe_young_diff
 # young_coefs <- exp(young_coefs)
-s2_p4 <- qplot(young_coefs, xlim = c(-2,12), xlab = "value of life (young), relative to adults")
+s2_p4 <- qplot(young_coefs, xlim = c(-4,16), xlab = "value of life (young), relative to adults")
 
 fe_elederly_diff <- fixef(mres_agesexsdsvg)[5,1]
 elderly_coefs <- ranef(mres_agesexsdsvg)$sn_idx[,1,]%>%data.frame()%>%.$elderly_diff+fe_elederly_diff
 # elderly_coefs <- exp(elderly_coefs)
-s2_p5 <- qplot(elderly_coefs, xlim = c(-12,2), xlab = "value of life (elderly), relative to adults")
+s2_p5 <- qplot(elderly_coefs, xlim = c(-16,4), xlab = "value of life (elderly), relative to adults")
 
 # plot
 lay <- rbind(c(1,2,3),
