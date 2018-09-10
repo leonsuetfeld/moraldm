@@ -2,10 +2,14 @@
 # ### load library / top statements #############
 # ###############################################
 
+library(sjPlot)
+library(sjlabelled)
+library(sjmisc)
 library(ggplot2)
 library(brms)
 library(bayesplot)
 library(dplyr)
+library(gridExtra)
 options(mc.cores = parallel::detectCores())
 options(max.print = 2000)
 
@@ -23,6 +27,9 @@ str(d1)
 # condition coding scheme:
 # 1 = VR text fast, 2 = VR text slow, 3 = VR image fast, 4 = VR image slow
 
+# subject variables:
+# sex: 1 = female, 2 = male
+
 # add dummy variables for age and sex
 d1$left_young <- ifelse( d1$obstacle.left %in% c(1,2) , 1 , 0 )
 d1$left_adult <- ifelse( d1$obstacle.left %in% c(3,4) , 1 , 0 )
@@ -35,8 +42,10 @@ d1$adult_diff <- d1$right_adult - d1$left_adult # Bradley–Terry model (Codieru
 d1$elderly_diff <- d1$right_elderly - d1$left_elderly # Bradley–Terry model (Codierung mit -1 l 1 r etc.)
 d1$left_sex <- ifelse( d1$obstacle.left %in% c(1,3,5) , 1 , 0 ) # m = 0, f = 1
 d1$right_sex <- ifelse( d1$obstacle.right %in% c(1,3,5) , 1 , 0 ) # m = 0, f = 1
-d1$sex_diff <- d1$left_sex - d1$right_sex # 1 = f left m right, 0 = same, -1 = m left f right
+d1$sex_diff <- d1$right_sex - d1$left_sex # 1 = m left f right, 0 = same, -1 = f left m right
 d1$age_center <- d1$age - mean(d1$age)
+d1$sds17_center <- d1$sds17 - mean(d1$sds17)
+d1$vg_center <- d1$hours.video.games - mean(d1$hours.video.games)
 
 # change coding for choice
 d1$choice_left <- -1*d1$finish.lane + 2 # left = 1, right = 0
@@ -71,7 +80,6 @@ d1.hum.effect$visonset_left <- d1.hum.effect$visonset_left/2
 d1.hum.effect$sex_diff <- d1.hum.effect$sex_diff/2
 d1.hum.effect$elderly_diff <- d1.hum.effect$elderly_diff/2
 d1.hum.effect$young_diff <- d1.hum.effect$young_diff/2
-d1.hum.effect$speed <- d1.hum.effect$speed - 0.5
 d1.hum.effect$abstraction <- d1.hum.effect$abstraction - 0.5
 d1.hum.effect$sex <- d1.hum.effect$sex - 1.5
 
@@ -81,18 +89,7 @@ d1.hum.effect %>% purrr::map(function(x)unique(x))
 # ### define & fit bayesian models ##############
 # ###############################################
 
-# single level model
-model_single = choice_left ~
-  1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*speed*abstraction
-modelprior_single = get_prior(model_single, family=binomial, data=d1.hum.effect)
-priors_single <- c(set_prior("normal(0,3)", class = "b"))
-mres_single = brm(model_single,
-                  family=bernoulli,
-                  data=d1.hum.effect,
-                  control = list(adapt_delta=0.9),
-                  prior = priors_single)
-
-# full model
+# "full" model
 model_full = choice_left ~
   (1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction +
   ((1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction | sn_idx)
@@ -106,74 +103,228 @@ mres_full = brm(model_full,
                 control = list(adapt_delta=0.9),
                 prior = priors)
 
-# sex model
-model_sex = choice_left ~
-  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction + 
-  (visonset_left + sex_diff + young_diff + elderly_diff)*sex + 
-  ((1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction + 
-  (visonset_left + sex_diff + young_diff + elderly_diff)*sex | sn_idx)
-modelprior_sex = get_prior(model_sex, family=binomial, data=d1.hum.effect)
-priors_sex <- c(set_prior("lkj(2)", class = "cor"),
-                set_prior("normal(0,3)", class = "b"),
-                set_prior("cauchy(0,1)", class = "sd", group = "sn_idx")) # alternatives: exponential(1) / cauchy(0,1)
-mres_sex = brm(model_sex,
-               family=bernoulli,
-               data=d1.hum.effect,
-               control = list(adapt_delta=0.9),
-               prior = priors_sex)
+summary(mres_full, maxsum=2)
 
-# agesex model
-model_agesex = choice_left ~
+# full age sex sds vg model
+model_agesexsdsvg = choice_left ~
   (1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction + 
-  (visonset_left + sex_diff + young_diff + elderly_diff)*sex + 
-  (visonset_left + sex_diff + young_diff + elderly_diff)*age + 
-  ((1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction + 
-  (visonset_left + sex_diff + young_diff + elderly_diff)*sex + 
-  (visonset_left + sex_diff + young_diff + elderly_diff)*age | sn_idx)
-modelprior_agesex = get_prior(model_agesex, family=binomial, data=d1.hum.effect)
-priors_agesex <- c(set_prior("lkj(2)", class = "cor"),
-                set_prior("normal(0,3)", class = "b"),
-                set_prior("cauchy(0,1)", class = "sd", group = "sn_idx")) # alternatives: exponential(1) / cauchy(0,1)
-mres_agesex = brm(model_agesex,
-                  family=bernoulli,
-                  data=d1.hum.effect,
-                  control = list(adapt_delta=0.9),
-                  prior = priors_agesex)
+  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*sex + 
+  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*age_center + 
+  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*sds17_center + 
+  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*vg_center + 
+  ((1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction | sn_idx)
+modelprior_agesexsdsvg = get_prior(model_agesexsdsvg, family=binomial, data=d1.hum.effect)
+priors_agesexsdsvg <- c(set_prior("lkj(2)", class = "cor"),
+                        set_prior("normal(0,3)", class = "b"),
+                        set_prior("cauchy(0,1)", class = "sd", group = "sn_idx"))
+mres_agesexsdsvg = brm(model_agesexsdsvg,
+                       family=bernoulli,
+                       data=d1.hum.effect,
+                       control = list(adapt_delta=0.9),
+                       prior = priors_agesexsdsvg)
+
+summary(mres_agesexsdsvg, maxsum=2)
 
 # ###############################################
 # ### print results #############################
 # ###############################################
 
-summary(mres_full, maxsum=2)
-
 # Population-Level Effects: 
 #                                 Estimate Est.Error l-95% CI u-95% CI Eff.Sample Rhat
-# Intercept                           0.05      0.12    -0.18     0.28       4000 1.00
-# visonset_left                       0.50      0.29    -0.07     1.06       2652 1.00
-# sex_diff                           -2.40      0.32    -3.08    -1.78       2322 1.00
-# young_diff                          7.41      0.82     5.91     9.17       1729 1.00
-# elderly_diff                       -6.03      0.65    -7.41    -4.84       1009 1.00
-# speed                               0.28      0.21    -0.13     0.71       4000 1.00
-# abstraction                         0.00      0.24    -0.49     0.48       4000 1.00
-# visonset_left:speed                -0.14      0.41    -0.95     0.65       4000 1.00
-# sex_diff:speed                      0.91      0.49    -0.05     1.86       4000 1.00
-# young_diff:speed                   -2.89      0.80    -4.53    -1.36       4000 1.00
-# elderly_diff:speed                  2.33      0.85     0.74     4.05       4000 1.00
-# visonset_left:abstraction          -0.50      0.42    -1.34     0.34       4000 1.00
-# sex_diff:abstraction                0.27      0.49    -0.70     1.22       4000 1.00
-# young_diff:abstraction              1.63      0.81     0.08     3.27       4000 1.00
-# elderly_diff:abstraction            4.20      0.78     2.74     5.87       4000 1.00
-# speed:abstraction                  -0.04      0.41    -0.83     0.77       4000 1.00
-# visonset_left:speed:abstraction    -0.00      0.78    -1.52     1.51       4000 1.00
-# sex_diff:speed:abstraction          0.42      0.91    -1.34     2.22       4000 1.00
-# young_diff:speed:abstraction        1.33      1.34    -1.27     3.98       4000 1.00
-# elderly_diff:speed:abstraction      0.17      1.33    -2.40     2.77       4000 1.00
+# Intercept                           0.06      0.14    -0.21     0.32       4000 1.00
+# visonset_left                       0.62      0.34    -0.06     1.27       2943 1.00 !!
+# sex_diff                           -2.61      0.38    -3.39    -1.91       2401 1.00 !!!
+# young_diff                          8.12      0.96     6.33    10.14       2022 1.00 !!!
+# elderly_diff                       -6.86      0.77    -8.50    -5.46       1354 1.00 !!!
+# speed                               0.32      0.23    -0.14     0.78       4000 1.00 !!
+# abstraction                        -0.04      0.26    -0.55     0.48       4000 1.00
+# sex                                -0.03      0.30    -0.64     0.58       4000 1.00
+# age_center                          0.04      0.04    -0.03     0.13       4000 1.00
+# sds17_center                        0.04      0.05    -0.04     0.14       4000 1.00
+# vg_center                          -0.01      0.03    -0.07     0.05       4000 1.00
+# visonset_left:speed                -0.21      0.46    -1.12     0.70       4000 1.00
+# sex_diff:speed                      0.97      0.53    -0.07     2.04       4000 1.00 !!
+# young_diff:speed                   -3.07      0.85    -4.80    -1.42       4000 1.00 !!!
+# elderly_diff:speed                  2.51      0.90     0.78     4.29       4000 1.00 !!!
+# visonset_left:abstraction          -0.59      0.48    -1.51     0.34       4000 1.00 !
+# sex_diff:abstraction                0.34      0.52    -0.68     1.37       4000 1.00
+# young_diff:abstraction              1.79      0.86     0.14     3.48       4000 1.00 !!!
+# elderly_diff:abstraction            4.57      0.86     2.96     6.35       4000 1.00 !!!
+# speed:abstraction                  -0.04      0.46    -0.96     0.87       4000 1.00
+# visonset_left:sex                   0.51      0.74    -0.94     1.98       2856 1.00
+# sex_diff:sex                        0.39      0.78    -1.16     1.93       4000 1.00
+# young_diff:sex                     -0.47      1.60    -3.55     2.67       3171 1.00
+# elderly_diff:sex                   -1.78      1.22    -4.14     0.62       3543 1.00 !!
+# visonset_left:age_center           -0.02      0.09    -0.20     0.18       3295 1.00
+# sex_diff:age_center                -0.13      0.10    -0.34     0.06       3225 1.00 !!
+# young_diff:age_center              -0.12      0.22    -0.54     0.31       3127 1.00
+# elderly_diff:age_center            -0.12      0.17    -0.46     0.20       4000 1.00
+# visonset_left:sds17_center          0.18      0.12    -0.05     0.41       2925 1.00 !!
+# sex_diff:sds17_center              -0.16      0.12    -0.40     0.07       3410 1.00 !!
+# young_diff:sds17_center            -0.07      0.28    -0.62     0.50       2532 1.00
+# elderly_diff:sds17_center          -0.10      0.20    -0.52     0.30       3328 1.00
+# visonset_left:vg_center            -0.01      0.08    -0.17     0.14       2997 1.00
+# sex_diff:vg_center                 -0.05      0.08    -0.21     0.11       4000 1.00
+# young_diff:vg_center                0.02      0.18    -0.33     0.37       3024 1.00
+# elderly_diff:vg_center              0.01      0.13    -0.25     0.26       4000 1.00
+# visonset_left:speed:abstraction    -0.14      0.86    -1.90     1.57       4000 1.00
+# sex_diff:speed:abstraction          0.31      0.97    -1.58     2.23       4000 1.00
+# young_diff:speed:abstraction        1.71      1.44    -1.12     4.56       4000 1.00 !
+# elderly_diff:speed:abstraction      0.27      1.44    -2.53     3.08       4000 1.00
+
+# Effects:
+# "!" marks those where the MAP value is more than one SD away from 0
+# "!!" marks those where a "large" part of the probability mass is on one side of 0
+# "!!!" marks those where the 95% CI is on one side of 0.
+#  - Geschlecht "+0.5" (male) hat einen absolut größeren Effekt für elderly_diff,
+#    d.h. Männer neigen mehr als Frauen dazu, elderly people zu opfern.
 
 # predictions for abstraction==1 (image): main + 0.5*abstraction
 # predictions for abstraction==0 (text): main - 0.5*abstraction
 
 # plot posteriors
 stanplot(mres_full, pars=c("b_"), type="areas", exact_match=FALSE)
+
+# ###############################################
+# ### plots #####################################
+# ###############################################
+
+terms = c("Intercept",
+          "visonset_left",
+          "sex_diff",
+          "young_diff",
+          "elderly_diff",
+          "abstraction",
+          "visonset_left.abstraction",
+          "sex_diff.abstraction",
+          "young_diff.abstraction",
+          "elderly_diff.abstraction",
+          "speed",
+          "visonset_left.speed",
+          "sex_diff.speed",
+          "young_diff.speed",
+          "elderly_diff.speed",
+          "speed.abstraction",
+          "visonset_left.speed.abstraction",
+          "sex_diff.speed.abstraction",
+          "young_diff.speed.abstraction",
+          "elderly_diff.speed.abstraction"),
+order.terms = c(6,13,7,17,2,1,14,8,18,3,11,15,9,19,4,12,16,10,20,5),
+
+s2_p1 <- plot_model(mres_agesexsdsvg,
+                    order.terms = c(1,2,3,4,5,
+                                    7,12,13,14,15,
+                                    6,8,9,10,11,
+                                    16,17,18,19,20),
+                    group.terms = c(1,1,1,1,1,3,2,3,3,3,3,2,2,2,2,4,4,4,4,4),
+                    terms = c("Intercept",
+                              "visonset_left",
+                              "sex_diff",
+                              "young_diff",
+                              "elderly_diff",
+                              "abstraction",
+                              "visonset_left.abstraction",
+                              "sex_diff.abstraction",
+                              "young_diff.abstraction",
+                              "elderly_diff.abstraction",
+                              "speed",
+                              "visonset_left.speed",
+                              "sex_diff.speed",
+                              "young_diff.speed",
+                              "elderly_diff.speed",
+                              "speed.abstraction",
+                              "visonset_left.speed.abstraction",
+                              "sex_diff.speed.abstraction",
+                              "young_diff.speed.abstraction",
+                              "elderly_diff.speed.abstraction"),
+                    bpe.color = "black",
+                    dot.size = 2.0,
+                    dot.color = "black",
+                    bpe = "mean",
+                    show.intercept = TRUE,
+                    width = 0.3,
+                    prob.inner = .5,
+                    prob.outer = .95,
+                    title = "")
+
+s2_p2 <- plot_model(mres_agesexsdsvg,
+                    order.terms = c(21,25,26,27,28,
+                                    22,29,30,31,32,
+                                    24,37,38,39,40,
+                                    23,33,34,35,36),
+                    group.terms = c(1,2,4,3,1,1,1,1,2,2,2,2,4,4,4,4,3,3,3,3),
+                    rm.terms = c("Intercept",
+                              "visonset_left",
+                              "sex_diff",
+                              "young_diff",
+                              "elderly_diff",
+                              "abstraction",
+                              "visonset_left.abstraction",
+                              "sex_diff.abstraction",
+                              "young_diff.abstraction",
+                              "elderly_diff.abstraction",
+                              "speed",
+                              "visonset_left.speed",
+                              "sex_diff.speed",
+                              "young_diff.speed",
+                              "elderly_diff.speed",
+                              "speed.abstraction",
+                              "visonset_left.speed.abstraction",
+                              "sex_diff.speed.abstraction",
+                              "young_diff.speed.abstraction",
+                              "elderly_diff.speed.abstraction"),
+                    bpe.color = "black",
+                    dot.size = 2.0,
+                    dot.color = "black",
+                    bpe = "mean",
+                    show.intercept = TRUE,
+                    width = 0.3,
+                    prob.inner = .5,
+                    prob.outer = .95,
+                    title = "")
+
+# grid.arrange(s2_p1,s2_p2, nrow=1)
+
+# create plots: distribution of random effects (with added fixed effects)
+fe_sex_diff <- fixef(mres_agesexsdsvg)[3,1]
+sex_coefs <- ranef(mres_agesexsdsvg)$sn_idx[,1,]%>%data.frame()%>%.$sex_diff+fe_sex_diff
+# sex_coefs <- exp(sex_coefs)
+s2_p3 <- qplot(sex_coefs, xlim = c(0,4), xlab = "value of life (female), relative to male")
+
+fe_young_diff <- fixef(mres_agesexsdsvg)[4,1]
+young_coefs <- ranef(mres_agesexsdsvg)$sn_idx[,1,]%>%data.frame()%>%.$young_diff+fe_young_diff
+# young_coefs <- exp(young_coefs)
+s2_p4 <- qplot(young_coefs, xlim = c(-2,12), xlab = "value of life (young), relative to adults")
+
+fe_elederly_diff <- fixef(mres_agesexsdsvg)[5,1]
+elderly_coefs <- ranef(mres_agesexsdsvg)$sn_idx[,1,]%>%data.frame()%>%.$elderly_diff+fe_elederly_diff
+# elderly_coefs <- exp(elderly_coefs)
+s2_p5 <- qplot(elderly_coefs, xlim = c(-12,2), xlab = "value of life (elderly), relative to adults")
+
+# plot
+lay <- rbind(c(1,2,3),
+             c(1,2,4),
+             c(1,2,5))
+grid.arrange(s2_p1,s2_p2,s2_p3,s2_p4,s2_p5, nrow=3, ncol=3, layout_matrix = lay)
+
+# ###############################################
+# ### hypothesis tests ##########################
+# ###############################################
+
+# bayes factor (BF10) calculation for all population-level parameters
+# question: since it's a ratio of prior vs. posterior it's very dependent on our prior choice -- how do we make sure the priors are ok?
+
+# Intercept
+h1 <- hypothesis(mres_agesexsdsvg, "Intercept = 0")
+h1
+BF10_1 <- 1/h1$hypothesis$Evid.Ratio
+BF10_1
+
+# visonset_left
+h2 <- hypothesis(mres_agesexsdsvg, "visonset_left = 0")
+h2
+BF10_2 <- 1/h2$hypothesis$Evid.Ratio
+BF10_2
 
 # ###############################################
 # ### model comparison ##########################
