@@ -269,6 +269,7 @@ s2_p2a <- plot_model(mres_agesexsdsvg,
                               "sex_diff.sex",
                               "young_diff.sex",
                               "elderly_diff.sex"),
+                    axis.lim = c(0.01,50),
                     bpe.color = "black",
                     dot.size = 2.0,
                     dot.color = "black",
@@ -309,6 +310,7 @@ s2_p2b <- plot_model(mres_agesexsdsvg,
                                  "sex_diff.sex",
                                  "young_diff.sex",
                                  "elderly_diff.sex"),
+                    axis.lim = c(0.8,1.5),
                     bpe.color = "black",
                     dot.size = 2.0,
                     dot.color = "black",
@@ -338,9 +340,9 @@ elderly_coefs <- ranef(mres_agesexsdsvg)$sn_idx[,1,]%>%data.frame()%>%.$elderly_
 s2_p5 <- qplot(elderly_coefs, xlim = c(-16,4), xlab = "value of life (elderly), relative to adults")
 
 # plot
-lay <- rbind(c(1,2,4),
-             c(1,3,5),
-             c(1,3,6))
+lay <- rbind(c(1,1,2,2,4),
+             c(1,1,3,3,5),
+             c(1,1,3,3,6))
 grid.arrange(s2_p1,s2_p2a,s2_p2b,s2_p3,s2_p4,s2_p5, nrow=3, ncol=3, layout_matrix = lay)
 
 # ###############################################
