@@ -59,8 +59,8 @@ names(d1)[names(d1) == 'block'] <- 'block_id'
 d1$sn_idx <- rethinking::coerce_index(d1$subject.number)
 
 # transform condition into modality / abstract dummy coding
-d1$modality <- ifelse( d1$condition %in% c(1,2) , 0 , 1 )
-d1$abstraction <- ifelse( d1$condition %in% c(1,3) , 0 , 1 )
+d1$modality <- ifelse( d1$condition %in% c(1,2) , 0 , 1 ) # 0 = desktop, 1 = vr
+d1$abstraction <- ifelse( d1$condition %in% c(1,3) , 0 , 1 ) # 0 = slow, 1 = fast
 
 # create data frame containing only human-human trials
 d1.hum <- d1[d1$obstacle.left<7,]
