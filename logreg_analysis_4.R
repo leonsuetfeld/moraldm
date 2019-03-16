@@ -68,10 +68,10 @@ d1.hum <- d1.hum[d1.hum$obstacle.right<7,]
 
 # create d1.effect data frame
 d1.hum.effect <- d1.hum
-d1.hum.effect$visonset_left <- d1.hum.effect$visonset_left/2
-d1.hum.effect$sex_diff <- d1.hum.effect$sex_diff/2
-d1.hum.effect$elderly_diff <- d1.hum.effect$elderly_diff/2
-d1.hum.effect$young_diff <- d1.hum.effect$young_diff/2
+d1.hum.effect$visonset_left <- d1.hum.effect$visonset_left
+d1.hum.effect$sex_diff <- d1.hum.effect$sex_diff
+d1.hum.effect$elderly_diff <- d1.hum.effect$elderly_diff
+d1.hum.effect$young_diff <- d1.hum.effect$young_diff
 d1.hum.effect$modality <- d1.hum.effect$modality - 0.5
 d1.hum.effect$abstraction <- d1.hum.effect$abstraction - 0.5
 
@@ -96,9 +96,29 @@ priors <- c(set_prior("lkj(2)", class = "cor"),
 mres_full = brm(model_full,
                 family=bernoulli,
                 data=d1.hum.effect,
-                control = list(adapt_delta=0.9),
+                control = list(adapt_delta=0.95),
+                chains=4,iter=8000,cores=4,warmup=2000,
                 prior = priors)
 summary(mres_full, maxsum=2)
+
+
+
+model_full_noabstraction = choice_left ~
+  1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*modality +
+  (1 + visonset_left + visonset_left:abstraction + (sex_diff + young_diff + elderly_diff)*modality*abstraction | sn_idx)
+
+priors <- c(set_prior("lkj(2)", class = "cor"),
+            set_prior("normal(0,3)", class = "b"),
+            set_prior("cauchy(0,1)", class = "sd", group = "sn_idx")) # alternatives: exponential(1) / cauchy(0,1)
+mres_full_noabstraction = brm(model_full_noabstraction,
+                family=bernoulli,
+                data=d1.hum.effect,
+                control = list(adapt_delta=0.95),
+                chains=4,iter=8000,cores=4,warmup=2000,
+                prior = priors)
+
+save("mres_full_noabstraction",file="stan_model_1_noabstraction.RData")
+
 
 # ###############################################
 # ### print results #############################

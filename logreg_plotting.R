@@ -3,9 +3,9 @@ library(ggplot2)
 library(bayesplot)
 library(brms)
 library(dplyr)
-load("stan_model_result")
- 
-
+#load("stan_model_result")
+load("C:/Users/behinger/cloud/PhD/Supervision/Leon/stan_model_1.RData")
+load("C:/Users/behinger/cloud/PhD/Supervision/Leon/stan_model_2.RData")
 
 theme_Publication <- function(base_size=14) {
   library(grid)
@@ -92,12 +92,12 @@ r = r%>%label_effects
 #-----
 plot_names = function(x,short=FALSE){
   rename_frame = list(
-    "modality:abstraction"  = "± diff. left lane [abstr.+mod.]",
-    "speed:abstraction"     = "± diff. left lane [speed+abstr.]",
+    "modality:abstraction"  = " left lane bias [abstr.+mod.]",
+    "speed:abstraction"     = " left lane bias [speed+abstr.]",
     
-    "abstraction"  = "± diff. left lane [abstr.]",
-    "speed"        = "± diff. left lane [speed]",
-    "modality"     = "± diff. left lane [mod.]",
+    "abstraction"  = " left lane bias [abstr.]",
+    "speed"        = " left lane bias [speed]",
+    "modality"     = " left lane bias [mod.]",
     
     "Intercept"    = "adv. left lane",
     
@@ -110,52 +110,52 @@ plot_names = function(x,short=FALSE){
     
     
     "sds17_center" = "SDS 17",
-    "vg_center"    = "video game exp.",
+    "vg_center"    = "video game",
     "age_center"   = "subject age",
     "sex"          = "subject gender",
     
-  "visonset_left:abstraction"          = "± diff. omission bias [abstr.]",
-  "visonset_left:modality"             = "± diff. omission bias [mod.]",
-  "visonset_left:speed"                = "± diff. omission bias [speed]",
-  "visonset_left:speed:abstraction"    = "± diff. omission bias [abstr.+speed]",
-  "visonset_left:modality:abstraction" = "± diff. omission bias [abstr.+mod.]",
-  "visonset_left:sds17_center"         = "± diff. omission bias [SDS17]",
-  "visonset_left:age_center"           = "± diff. omission bias [subject age]",
-  "visonset_left:vg_center"            = "± diff. omission bias [videogame]",
-  "visonset_left:sex"                  = "± diff. omission bias [subject sex]",
+  "visonset_left:abstraction"          = " omission bias [abstr.]",
+  "visonset_left:modality"             = " omission bias [mod.]",
+  "visonset_left:speed"                = " omission bias [speed]",
+  "visonset_left:speed:abstraction"    = " omission bias [abstr.+speed]",
+  "visonset_left:modality:abstraction" = " omission bias [abstr.+mod.]",
+  "visonset_left:sds17_center"         = " omission bias [SDS17]",
+  "visonset_left:age_center"           = " omission bias [subject age]",
+  "visonset_left:vg_center"            = " omission bias [videogame]",
+  "visonset_left:sex"                  = " omission bias [subject sex]",
   
-  "sex_diff:abstraction"          = "± diff. female [abstr.]",
-  "sex_diff:modality"             = "± diff. female [mod.]",
-  "sex_diff:speed"                = "± diff. female [speed]",
-  "sex_diff:speed:abstraction"    = "± diff. female [abstr.+speed]",
-  "sex_diff:modality:abstraction" = "± diff. female [abstr.+mod.]",
-  "sex_diff:sds17_center"         = "± diff. female [SDS17]",
-  "sex_diff:age_center"           = "± diff. female [subject age]",
-  "sex_diff:vg_center"            = "± diff. female [videogame]",
-  "sex_diff:sex"                  = "± diff. female [subject sex]",
-  
-  
-  "young_diff:abstraction"          = "± diff. young [abstr.]",
-  "young_diff:modality"             = "± diff. young [mod.]",
-  "young_diff:speed"                = "± diff. young [speed]",
-  "young_diff:speed:abstraction"    = "± diff. young [abstr.+speed]",
-  "young_diff:modality:abstraction" = "± diff. young [abstr.+mod.]",
-  "young_diff:sds17_center"         = "± diff. young [SDS17]",
-  "young_diff:age_center"           = "± diff. young [subject age]",
-  "young_diff:vg_center"            = "± diff. young [videogame]",
-  "young_diff:sex"                  = "± diff. young [subject sex]",
+  "sex_diff:abstraction"          = " gender bias [abstr.]",
+  "sex_diff:modality"             = " gender bias [mod.]",
+  "sex_diff:speed"                = " gender bias [speed]",
+  "sex_diff:speed:abstraction"    = " gender bias [abstr.+speed]",
+  "sex_diff:modality:abstraction" = " gender bias [abstr.+mod.]",
+  "sex_diff:sds17_center"         = " gender bias [SDS17]",
+  "sex_diff:age_center"           = " gender bias [subject age]",
+  "sex_diff:vg_center"            = " gender bias [videogame]",
+  "sex_diff:sex"                  = " gender bias [subject sex]",
   
   
+  "young_diff:abstraction"          = " young bias [abstr.]",
+  "young_diff:modality"             = " young bias [mod.]",
+  "young_diff:speed"                = " young bias [speed]",
+  "young_diff:speed:abstraction"    = " young bias [abstr.+speed]",
+  "young_diff:modality:abstraction" = " young bias [abstr.+mod.]",
+  "young_diff:sds17_center"         = " young bias [SDS17]",
+  "young_diff:age_center"           = " young bias [subject age]",
+  "young_diff:vg_center"            = " young bias [videogame]",
+  "young_diff:sex"                  = " young bias [subject sex]",
   
-  "elderly_diff:abstraction"          = "± diff. elderly [abstr.]",
-  "elderly_diff:modality"             = "± diff. elderly [mod.]",
-  "elderly_diff:speed"                = "± diff. elderly [speed]",
-  "elderly_diff:speed:abstraction"    = "± diff. elderly [abstr.+speed]",
-  "elderly_diff:modality:abstraction" = "± diff. elderly [abstr.+mod.]",
-  "elderly_diff:sds17_center"         = "± diff. elderly [SDS17]",
-  "elderly_diff:age_center"           = "± diff. elderly [subject age]",
-  "elderly_diff:vg_center"            = "± diff. elderly [videogame]",
-  "elderly_diff:sex"                  = "± diff. elderly [subject sex]"
+  
+  
+  "elderly_diff:abstraction"          = " elderly bias [abstr.]",
+  "elderly_diff:modality"             = " elderly bias [mod.]",
+  "elderly_diff:speed"                = " elderly bias [speed]",
+  "elderly_diff:speed:abstraction"    = " elderly bias [abstr.+speed]",
+  "elderly_diff:modality:abstraction" = " elderly bias [abstr.+mod.]",
+  "elderly_diff:sds17_center"         = " elderly bias [SDS17]",
+  "elderly_diff:age_center"           = " elderly bias [subject age]",
+  "elderly_diff:vg_center"            = " elderly bias [videogame]",
+  "elderly_diff:sex"                  = " elderly bias [subject sex]"
   
 
   
@@ -181,8 +181,8 @@ plot_misc = list(geom_hline(yintercept = 0,linetype="dotted"),
                  xlab(''),
                  ggsci::scale_color_d3(guide=F),
                  #scale_y_continuous(trans=logToLog10),
-                 scale_y_continuous(labels=function(x)10^x,breaks=seq(-6,6,3),name = "Odds Ratios",limits = c(-4.8,6.5),position="right"),
-                 annotation_logticks(base=10,sides="r",scaled=T),
+                 scale_y_continuous(labels=function(x)10^x,breaks=seq(-6,6,3),name = "Odds Ratios",limits = c(-4.7,6.0),position="right"),
+                 #annotation_logticks(base=10,sides="r",scaled=T),
                  theme_Publication(),
                  theme(axis.text.x=element_text(angle=90,hjust=0)),
                  theme(axis.text.y=element_text(angle=90,hjust=0))
@@ -191,16 +191,15 @@ plot_misc = list(geom_hline(yintercept = 0,linetype="dotted"),
 
 
 ## main effects only
-ggplot(m%>%subset(effect %in% c("Intercept","visonset_left","young_diff","sex_diff","elderly_diff"))%>%plot_names(),
+p_main = ggplot(m%>%subset(effect %in% c("Intercept","visonset_left","young_diff","sex_diff","elderly_diff"))%>%plot_names(),
        aes(y=Estimate %>%exp%>%log10,
            ymin=Q2.5 %>%exp%>%log10,
            ymax=Q97.5%>%exp%>%log10,x=effect,group=study,color=factor(study)))+
   ggbeeswarm::geom_quasirandom(data=r%>%subset(effect %in% c("Intercept","visonset_left","young_diff","sex_diff","elderly_diff"))%>%plot_names(),alpha=0.1,dodge.width=0.5)+
-  geom_errorbar(position=position_dodge(width=0.5),width=0.1,color="black")+
-  geom_point(position=position_dodge(width=0.5),color="black")+
+  geom_errorbar(position=position_dodge(width=0.5),width=0.1)+
+  geom_point(position=position_dodge(width=0.5))+
   scale_color_discrete(guide=F)+
   plot_misc
-
 
 ## Interactions only
 p1 = ggplot(m%>%subset(effecttype!="3xinteraction"&!is.na(group)&!(group %in% c("age_center","sds17_center","vg_center")))%>%plot_names(short=T),
@@ -208,11 +207,13 @@ p1 = ggplot(m%>%subset(effecttype!="3xinteraction"&!is.na(group)&!(group %in% c(
            ymin=Q2.5 %>%exp%>%log10,
            ymax=Q97.5%>%exp%>%log10,x=effect,group=study,color=factor(study)))+
   ggbeeswarm::geom_quasirandom(data=r%>%subset(effecttype!="3xinteraction"&!is.na(group)&!(group %in% c("age_center","sds17_center","vg_center")))%>%plot_names(short=T),alpha=0.1,dodge.width=0.5)+
-  geom_errorbar(position=position_dodge(width=0.5),width=0.1,color="black")+
-  geom_point(position=position_dodge(width=0.5),color="black")+
+  geom_errorbar(position=position_dodge(width=0.5),width=0.1)+
+  geom_point(position=position_dodge(width=0.5))+
   scale_color_discrete(guide=F)+
-  facet_wrap(~group,ncol = 4,scales = "free_x")+
-  plot_misc
+  facet_wrap(~group,ncol = 1,scales = "free")+
+  plot_misc+
+  scale_y_continuous(labels=function(x)10^x,breaks=seq(-6,6,3),name = "Odds Ratios",limits = c(-3.0,4.5),position="right")
+  
 p1
 
 
@@ -221,14 +222,19 @@ p2 = ggplot(m%>%subset(effecttype!="3xinteraction"&!is.na(group)&(group %in% c("
            ymin=Q2.5 %>%exp%>%log10,
            ymax=Q97.5%>%exp%>%log10,x=effect,group=study,color=factor(study)))+
   ggbeeswarm::geom_quasirandom(data=r%>%subset(effecttype!="3xinteraction"&!is.na(group)&(group %in% c("age_center","sds17_center","vg_center")))%>%plot_names(short=T),alpha=0.1,dodge.width=0.5)+
-  geom_errorbar(position=position_dodge(width=0.5),width=0.1,color="black")+
-  geom_point(position=position_dodge(width=0.5),color="black")+
+  geom_errorbar(position=position_dodge(width=0.5),width=0.1)+
+  geom_point(position=position_dodge(width=0.5))+
   scale_color_discrete(guide=F)+
-  facet_wrap(~group,ncol = 3,scales = "free")+
+  facet_wrap(~group,ncol = 1,scales = "free")+
   plot_misc+
   scale_y_continuous(labels=function(x)(10^x),breaks=log10(c(0.33,0.5,1,2,3)),name = "Odds Ratios",limits = c(-0.5,0.5),position="right")
 
 p2
 scale = 3
-ggsave("figure4a.pdf",p1,width=scale*4,height=scale*2)
-ggsave("figure4b.pdf",p2,width=scale*3,height=scale*2)
+
+ggsave("figure3.pdf",p_main,width=scale,height=scale*2)
+ggsave("figure4a.pdf",p1,width=scale*0.75,height=scale*2*2)
+ggsave("figure4b.pdf",p2,width=scale,height=scale*2*1.5)
+
+
+

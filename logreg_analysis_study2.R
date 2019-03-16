@@ -76,11 +76,13 @@ d1.hum <- d1.hum[d1.hum$obstacle.right<7,]
 
 # create d1.effect data frame
 d1.hum.effect <- d1.hum
-d1.hum.effect$visonset_left <- d1.hum.effect$visonset_left/2
-d1.hum.effect$sex_diff <- d1.hum.effect$sex_diff/2
-d1.hum.effect$elderly_diff <- d1.hum.effect$elderly_diff/2
-d1.hum.effect$young_diff <- d1.hum.effect$young_diff/2
+d1.hum.effect$visonset_left <- d1.hum.effect$visonset_left
+d1.hum.effect$sex_diff <- d1.hum.effect$sex_diff
+d1.hum.effect$elderly_diff <- d1.hum.effect$elderly_diff
+d1.hum.effect$young_diff <- d1.hum.effect$young_diff
 d1.hum.effect$abstraction <- d1.hum.effect$abstraction - 0.5
+
+d1.hum.effect$speed <- d1.hum.effect$speed - 0.5
 d1.hum.effect$sex <- d1.hum.effect$sex - 1.5
 
 d1.hum.effect %>% purrr::map(function(x)unique(x))
@@ -90,20 +92,22 @@ d1.hum.effect %>% purrr::map(function(x)unique(x))
 # ###############################################
 
 # "full" model
-model_full = choice_left ~
-  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction +
-  ((1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction | sn_idx)
-modelprior = get_prior(model_full, family=binomial, data=d1.hum.effect)
-priors <- c(set_prior("lkj(2)", class = "cor"),
-            set_prior("normal(0,3)", class = "b"),
-            set_prior("cauchy(0,1)", class = "sd", group = "sn_idx")) # alternatives: exponential(1) / cauchy(0,1)
-mres_full = brm(model_full,
-                family=bernoulli,
-                data=d1.hum.effect,
-                control = list(adapt_delta=0.9),
-                prior = priors)
-
-summary(mres_full, maxsum=2)
+# model_full = choice_left ~
+#   (1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction +
+#   ((1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction | sn_idx)
+# modelprior = get_prior(model_full, family=binomial, data=d1.hum.effect)
+# priors <- c(set_prior("lkj(2)", class = "cor"),
+#             set_prior("normal(0,3)", class = "b"),
+#             set_prior("cauchy(0,1)", class = "sd", group = "sn_idx")) # alternatives: exponential(1) / cauchy(0,1)
+# mres_full = brm(model_full,
+#                 family=bernoulli,
+#                 data=d1.hum.effect,
+#                 control = list(adapt_delta=0.9),
+#                 chains=4,iter=8000,cores=4,warmup=2000,
+#                 
+#                 prior = priors)
+# 
+# summary(mres_full, maxsum=2)
 
 # full age sex sds vg model
 model_agesexsdsvg = choice_left ~
@@ -121,66 +125,37 @@ mres_agesexsdsvg = brm(model_agesexsdsvg,
                        family=bernoulli,
                        data=d1.hum.effect,
                        control = list(adapt_delta=0.9),
+                       chains=4,iter=8000,cores=4,warmup=2000,
                        prior = priors_agesexsdsvg)
 
+
 summary(mres_agesexsdsvg, maxsum=2)
+save("mres_agesexsdsvg",file="stan_model_2.RData")
 
-# ###############################################
-# ### print results #############################
-# ###############################################
 
-# Population-Level Effects: 
-#                                 Estimate Est.Error l-95% CI u-95% CI Eff.Sample Rhat
-# Intercept                           0.06      0.14    -0.21     0.32       4000 1.00
-# visonset_left                       0.62      0.34    -0.06     1.27       2943 1.00 !!
-# sex_diff                           -2.61      0.38    -3.39    -1.91       2401 1.00 !!!
-# young_diff                          8.12      0.96     6.33    10.14       2022 1.00 !!!
-# elderly_diff                       -6.86      0.77    -8.50    -5.46       1354 1.00 !!!
-# speed                               0.32      0.23    -0.14     0.78       4000 1.00 !!
-# abstraction                        -0.04      0.26    -0.55     0.48       4000 1.00
-# sex                                -0.03      0.30    -0.64     0.58       4000 1.00
-# age_center                          0.04      0.04    -0.03     0.13       4000 1.00
-# sds17_center                        0.04      0.05    -0.04     0.14       4000 1.00
-# vg_center                          -0.01      0.03    -0.07     0.05       4000 1.00
-# visonset_left:speed                -0.21      0.46    -1.12     0.70       4000 1.00
-# sex_diff:speed                      0.97      0.53    -0.07     2.04       4000 1.00 !!
-# young_diff:speed                   -3.07      0.85    -4.80    -1.42       4000 1.00 !!!
-# elderly_diff:speed                  2.51      0.90     0.78     4.29       4000 1.00 !!!
-# visonset_left:abstraction          -0.59      0.48    -1.51     0.34       4000 1.00 !
-# sex_diff:abstraction                0.34      0.52    -0.68     1.37       4000 1.00
-# young_diff:abstraction              1.79      0.86     0.14     3.48       4000 1.00 !!!
-# elderly_diff:abstraction            4.57      0.86     2.96     6.35       4000 1.00 !!!
-# speed:abstraction                  -0.04      0.46    -0.96     0.87       4000 1.00
-# visonset_left:sex                   0.51      0.74    -0.94     1.98       2856 1.00
-# sex_diff:sex                        0.39      0.78    -1.16     1.93       4000 1.00
-# young_diff:sex                     -0.47      1.60    -3.55     2.67       3171 1.00
-# elderly_diff:sex                   -1.78      1.22    -4.14     0.62       3543 1.00 !!
-# visonset_left:age_center           -0.02      0.09    -0.20     0.18       3295 1.00
-# sex_diff:age_center                -0.13      0.10    -0.34     0.06       3225 1.00 !!
-# young_diff:age_center              -0.12      0.22    -0.54     0.31       3127 1.00
-# elderly_diff:age_center            -0.12      0.17    -0.46     0.20       4000 1.00
-# visonset_left:sds17_center          0.18      0.12    -0.05     0.41       2925 1.00 !!
-# sex_diff:sds17_center              -0.16      0.12    -0.40     0.07       3410 1.00 !!
-# young_diff:sds17_center            -0.07      0.28    -0.62     0.50       2532 1.00
-# elderly_diff:sds17_center          -0.10      0.20    -0.52     0.30       3328 1.00
-# visonset_left:vg_center            -0.01      0.08    -0.17     0.14       2997 1.00
-# sex_diff:vg_center                 -0.05      0.08    -0.21     0.11       4000 1.00
-# young_diff:vg_center                0.02      0.18    -0.33     0.37       3024 1.00
-# elderly_diff:vg_center              0.01      0.13    -0.25     0.26       4000 1.00
-# visonset_left:speed:abstraction    -0.14      0.86    -1.90     1.57       4000 1.00
-# sex_diff:speed:abstraction          0.31      0.97    -1.58     2.23       4000 1.00
-# young_diff:speed:abstraction        1.71      1.44    -1.12     4.56       4000 1.00 !
-# elderly_diff:speed:abstraction      0.27      1.44    -2.53     3.08       4000 1.00
 
-# Effects:
-# "!" marks those where the MAP value is more than one SD away from 0
-# "!!" marks those where a "large" part of the probability mass is on one side of 0
-# "!!!" marks those where the 95% CI is on one side of 0.
-#  - Geschlecht "+0.5" (male) hat einen absolut größeren Effekt für elderly_diff,
-#    d.h. Männer neigen mehr als Frauen dazu, elderly people zu opfern.
 
-# predictions for abstraction==1 (image): main + 0.5*abstraction
-# predictions for abstraction==0 (text): main - 0.5*abstraction
+model_agesexsdsvg_noabstraction = choice_left ~
+  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed + 
+  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*sex + 
+  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*age_center + 
+  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*sds17_center + 
+  (1 + visonset_left + sex_diff + young_diff + elderly_diff)*vg_center + 
+  ((1 + visonset_left + sex_diff + young_diff + elderly_diff)*speed*abstraction | sn_idx)
+
+priors_agesexsdsvg <- c(set_prior("lkj(2)", class = "cor"),
+                        set_prior("normal(0,3)", class = "b"),
+                        set_prior("cauchy(0,1)", class = "sd", group = "sn_idx"))
+
+mres_agesexsdsvg_noabstraction = brm(model_agesexsdsvg_noabstraction,
+                       family=bernoulli,
+                       data=d1.hum.effect,
+                       control = list(adapt_delta=0.9),
+                       chains=4,iter=8000,cores=4,warmup=2000,
+                       prior = priors_agesexsdsvg)
+
+
+loo::compare(c(loo::loo(mres_agesexsdsvg),loo::loo(mres_agesexsdsvg_noabstraction)))
 
 # plot posteriors
 stanplot(mres_full, pars=c("b_"), type="areas", exact_match=FALSE)
