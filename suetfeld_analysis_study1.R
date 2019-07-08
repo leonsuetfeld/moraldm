@@ -60,3 +60,4 @@ mres_full_noabstraction = brm(model_full_noabstraction,
                               prior = priors)
 
 save("mres_full_noabstraction",file="stan_model_1_noabstraction.RData")
+loo::compare(c(loo::loo(mres_full),loo::loo(mres_full_noabstraction)))

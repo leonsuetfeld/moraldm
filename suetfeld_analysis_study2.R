@@ -17,7 +17,7 @@ options(max.print = 2000)
 # ### load & pre-process data ###################
 # ###############################################
 d1 = read.csv("trialmatrix_2.csv")
-source('git_moraldm/suetfeld_preprocessing.R')
+source('suetfeld_preprocessing.R')
 d1.hum.effect = preprocessing(d1,study='2')
 
 
